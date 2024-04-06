@@ -1,0 +1,129 @@
+<html>
+    <head>
+        
+        <title>Test Client</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="robots" content="noindex, nofollow">
+        <script src="https://unpkg.com/nostr-tools/lib/nostr.bundle.js"></script>
+        <style>
+            #log{
+                display: flex;
+                flex-direction: column;
+                font-family: monospace;
+            }
+            .error{
+                color: red;
+            }
+            body{
+                padding:0.3rem;
+                text-align: left;
+                display: flex;
+                flex-direction: column;
+            }
+            textarea{
+                min-height: 600px;
+            }
+        </style>
+        <script>
+            async function main(){
+                       
+                const userPrivateKey =  window.NostrTools.generateSecretKey();
+
+                const textAreaEl= document.querySelector('textarea');
+                const logEl= document.querySelector('#log');
+                const outputEl= document.querySelector('#output');
+
+                const zipCodeStackApiKey = "01HTSCQSD5VKRN5N78XD0VAQ98";
+                const zipCode = "33162";
+                const event= {
+                    "kind": 5003,
+                    "created_at": Math.floor(Date.now() / 1000),
+                    "tags": [
+                        ["param", "run-on", "openagents/extism-runtime"],
+                        ["expiration", "" + Math.floor((Date.now() + 1000 * 60 * 2) / 1000)],
+                        ["param", "main", "https://github.com/riccardobl/openagents-test-meta-plugin/raw/master/meta.wasm"],
+                        ["param", "description", "Get weather data from zip code"],
+                        ["i", `{"apikey":"${zipCodeStackApiKey}","zipcode":"${zipCode}"}`]
+                    ],
+                    content: "",
+                };  
+                textAreaEl.value=JSON.stringify(event,null,2);
+
+                let jobId;
+
+                const pool = new window.NostrTools.SimplePool();
+                let relays = ["wss://nostr.rblb.it:7777"];
+
+
+                pool.subscribeMany(relays, [
+                    {
+                        kinds: [7000]
+                    }
+                ], {
+                    onevent: async (event) => {
+                        if (event.kind == 7000) {
+                            const etag= event.tags.find(t => t[0] == "e");
+                            if(etag[1]!= jobId){
+                                console.log("Skipping event with different job id", etag[1],jobId)
+                                return;
+                            }
+
+                            const status = event.tags.find(t => t[0] == "status");
+                            if (status && status[1] == "log") {
+                                const logEntryEl= document.createElement('span');
+                                logEntryEl.innerText=status[2];
+                                logEl.appendChild(logEntryEl);
+                            } else if (status && status[1] == "error") {
+                                const errorEntryEl= document.createElement('span');
+                                errorEntryEl.classList.add('error');
+                                errorEntryEl.innerText=status[2];
+                                logEl.appendChild(errorEntryEl);
+                            } else if (status && status[1] == "success") {
+                                const filter = {
+                                    kinds: [6003],
+                                    "#e": [jobId],
+                                    limit: 1
+                                };
+                                console.log("\n\nRemote done. Find results using filter: " + JSON.stringify(filter, null, 2));
+                                const result = await pool.querySync(relays, filter);
+                                const content= result[0].content;
+                                outputEl.innerText=content;
+                            }
+                        }
+                    }
+                });
+
+
+ 
+                const submitButton= document.querySelector('button');
+                submitButton.addEventListener("click",()=>{
+                    try{                       
+                        let event = JSON.parse(textAreaEl.value);
+                        event=window.NostrTools.finalizeEvent(event,userPrivateKey);
+                        jobId=event.id;
+                        pool.publish(relays, event);
+                        const logEntryEl= document.createElement('span');
+                        logEntryEl.innerText="Event submitted... waiting ...";
+                        logEl.appendChild(logEntryEl);
+                    }catch(e){
+                        console.error(e);
+                        alert("Error! "+e.message);
+                    }
+                });
+            }
+
+            window.onload = main;
+        </script>
+    </head>
+    <body>
+        <h1>Event</h1>
+        <textarea>
+        </textarea>
+        <button>Submit</button>
+        <h1>Output</h1>
+        <div id="output"></div>
+        <h1>Log</h1>
+        <div id="log"></div>
+    </body>
+</html>
