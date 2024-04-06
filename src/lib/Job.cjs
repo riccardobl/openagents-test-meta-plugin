@@ -6,7 +6,8 @@ const {
     Job_newInputJobRef,
     Job_newInputData,
     Job_newParam,
-    Job_request
+    Job_request,
+    Job_waitFor
 } = Host.getFunctions()
 
 
@@ -39,7 +40,8 @@ class Job {
      * @returns {boolean}
      */
     static async isDone(jobId){
-        const resp=await Job_isDone(jobId);
+        const mem=Memory.fromString(jobId);
+        const resp=await Job_isDone(mem.offset);
         return resp==1;     
     }
 
@@ -134,10 +136,8 @@ class Job {
 
 
     static async waitFor(jobId){
-        while(!await Job.isDone(jobId)){
-            await Job.log("Waiting for job "+jobId);
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
+        const mem = Memory.fromString(jobId);
+        await Job_waitFor(mem.offset);
     }
 }
 

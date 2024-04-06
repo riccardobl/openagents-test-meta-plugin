@@ -27,22 +27,23 @@ async function run() {
     };
 
     Job.log("Submiting subrequest "+JSON.stringify(req,null,2));
-    const subReqId=await Job.request(req);
+    const subReqId=(await Job.request(req)).id;
 
     Job.log("Waiting for subrequest "+subReqId);
 
     await Job.waitFor(subReqId);
 
+    Job.log("Subrequest " + subReqId + " is done.");
     const subReqOutput=await Job.get(subReqId);
-    Job.log("Subrequest "+subReqId+" is done. Result: "+subReqOutput.result.content+"... parsing ...");
+    Job.log("Result: "+subReqOutput.result.content+"... parsing ...");
     const results=JSON.parse(subReqOutput.result.content);
     const firstResult = results["results"][0];
-    Job.log("Get weather for " + firstResult + " lat" + firstResult.latitude + " lon" + firstResult.longitude);
+    Job.log("Get weather for " + JSON.stringify(firstResult) + " lat" + firstResult.latitude + " lon" + firstResult.longitude);
     const latitude = firstResult.latitude;
     const longitude = firstResult.longitude;
 
     // get weather data
-    const meteoUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m`;
+    const meteoUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,wind_speed_10m`;
     Job.log("Fetching weather data from " + meteoUrl);
 
     const request = {
@@ -60,9 +61,15 @@ async function run() {
         Host.outputString(errorMessage);
         throw new Error(errorMessage);
     }
-    Job.log("Completed " + response.status + " " + response.statusText);
+    Job.log("Completed " + response.status + " " + response.body);
+    const resp=JSON.parse(response.body);
+    const temperature=resp.current.temperature_2m;
+    const windspeed=resp.current.wind_speed_10m;
 
-    Host.outputString(response.body);
+    Host.outputString(JSON.stringify({
+        temperature: temperature,
+        windspeed: windspeed
+    }));
 }
 
 module.exports = { run };

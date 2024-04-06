@@ -1,5 +1,5 @@
 const esbuild = require('esbuild');
-const { NodeModulesPolyfillPlugin } = require('@esbuild-plugins/node-modules-polyfill')
+// const { NodeModulesPolyfillPlugin } = require('@esbuild-plugins/node-modules-polyfill')
 
 
 esbuild
@@ -8,7 +8,7 @@ esbuild
         outdir: './bundle',
         bundle: true,
         sourcemap: true,
-        plugins: [NodeModulesPolyfillPlugin()],
+        // plugins: [NodeModulesPolyfillPlugin()],
         minify: false,
         format: 'cjs',
         target: ['es2020'],
