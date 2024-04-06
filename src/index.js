@@ -7,20 +7,20 @@ async function run() {
     const { apikey, zipcode, country } = inputData;
 
     // prepare a sub request for another node/plugin
-    Job.log("Preparing to fetch weather data in " + zipcode + ", " + country);
+    Job.log("Preparing to fetch weather data in " + zipcode);
     const req = {
         runOn: "openagents/extism-runtime",
         expireAfter: Date.now() + 1000 * 60 * 60,
         description: "Get zip code info",
         inputs: [
-            Job.newInputData(JSON.stringify({
+            await Job.newInputData(JSON.stringify({
                 apikey: apikey,
                 zipcode: zipcode,
                 country: country
             }))
         ],
         params: [
-            Job.newParam("main", "https://github.com/OpenAgentsInc/plugin-world-zipcode-finder/raw/main/plugin.wasm")
+            await Job.newParam("main", "https://github.com/OpenAgentsInc/plugin-world-zipcode-finder/raw/main/plugin.wasm")
         ],
         kind: undefined,
         outputFormat: undefined
